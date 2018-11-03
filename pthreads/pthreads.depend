@@ -1,5 +1,0 @@
-# depslib dependency file v1.0
-1540825704 source:/home/damian/Coding/pthreads/main.cpp
-	<cstdio>
-	<pthread.h>
-

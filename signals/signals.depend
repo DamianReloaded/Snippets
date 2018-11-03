@@ -1,6 +1,0 @@
-# depslib dependency file v1.0
-1540840731 source:/home/damian/Coding/signals/main.cpp
-	<csignal>
-	<iostream>
-	<unistd.h>
-

@@ -1,5 +1,0 @@
-# depslib dependency file v1.0
-1540837720 source:/home/damian/Coding/fork/main.cpp
-	<cstdio>
-	<unistd.h>
-
