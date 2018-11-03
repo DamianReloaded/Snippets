@@ -1,0 +1,11 @@
+# depslib dependency file v1.0
+1540826865 source:/home/damian/Coding/timer_milliseconds/main.cpp
+	<iostream>
+	<sys/time.h>
+	<ctime>
+
+1540905678 source:/home/damian/Coding/Examples/timer_sleep/main.cpp
+	<iostream>
+	<sys/time.h>
+	<ctime>
+

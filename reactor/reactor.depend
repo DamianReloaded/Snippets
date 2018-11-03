@@ -1,0 +1,26 @@
+# depslib dependency file v1.0
+1540927217 source:/home/damian/Coding/Examples/reactor/main.cpp
+	"demultiplexer.h"
+	"process.h"
+
+1540925745 source:/home/damian/Coding/Examples/reactor/src/queue.cpp
+	"queue.h"
+
+1540928937 /home/damian/Coding/Examples/reactor/include/queue.h
+	<iostream>
+	<deque>
+
+1540928913 source:/home/damian/Coding/Examples/reactor/src/demultiplexer.cpp
+	"demultiplexer.h"
+	"process.h"
+
+1540929032 /home/damian/Coding/Examples/reactor/include/demultiplexer.h
+	"queue.h"
+
+1540927549 source:/home/damian/Coding/Examples/reactor/src/process.cpp
+	"process.h"
+
+1540928890 /home/damian/Coding/Examples/reactor/include/process.h
+	<assert.h>
+	"queue.h"
+
