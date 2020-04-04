@@ -42,12 +42,8 @@ std::array<func,2> v  { &a_function, &b_function };
 
 int main()
 {
-    {
-        v[0](params { .a {3,4} });
-    }
-    {
-        v[1](params { .b {123.4f} });
-    }
+	v[0](params { .a {3,4} });
+	v[1](params { .b {123.4f} });
 }
 
 /*
