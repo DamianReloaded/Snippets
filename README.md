@@ -1,3 +1,3 @@
 # Snippets
 
-Here I'll be throwing some snippets that may be useful for some.
+Here I'll be throwing some snippets.
