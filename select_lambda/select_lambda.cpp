@@ -11,16 +11,11 @@ class table
             return results;
         }
         void insert(const T& _record) {rows.push_back(_record);}
-        std::deque<T> operator () ()
-        {
-            return rows;
-        }
 
         std::deque<T> rows;
 };
 
-#define condition(x) { return x; }
-#define with(x,w) [](auto& x) condition(w)
+#define with(x,w) [](auto& x) { return w; }
 
 int main()
 {
