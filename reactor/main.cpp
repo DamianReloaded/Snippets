@@ -19,7 +19,7 @@ int main()
             {
                 message msg;
                 msg.type = k;
-                demu.push(msg);
+                demu.push(msg); // not thread safe. uses a mock lock
             }
         }
         demu.update();
