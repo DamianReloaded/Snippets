@@ -1,6 +1,6 @@
 # List comprehension in c++
 
-### An attempt to mimic the handyness of list comprehension in python. It uses macros tho :/
+### An attempt to mimic the handiness of list comprehension in python. It uses macros tho :/
 
 > PYTHON
 ```
