@@ -29,6 +29,9 @@ class table
 int main()
 {
     table<record> records;
+    records.insert({0,"cero"});
+    records.insert({1,"uno"});
+    records.insert({0,"dos"});
     auto results = records.select( with(r, r.id==1) );
     for (auto t : results.rows) printf(t.name.c_str());
     return 0;
