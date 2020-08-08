@@ -39,8 +39,8 @@ class in
 using namespace std;
 int main()
 {
-	switch(2)
-	{
+    switch(2)
+    {
         case 1:
         {
             array nums = {1,2,3,4};
@@ -83,6 +83,6 @@ int main()
             auto result = in(letters, each(x){return toupper(x);});
             return result[1];
         }
-	}
+    }
     return 0;
 }
