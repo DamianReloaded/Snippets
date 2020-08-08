@@ -19,7 +19,7 @@ int main()
             {
                 message msg;
                 msg.type = k;
-                demu.push(msg); // not thread safe. uses a mock lock
+                demu.push(msg); // not thread safe. process uses a mock lock instead of mutex
             }
         }
         demu.update();
