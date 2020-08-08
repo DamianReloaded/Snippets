@@ -39,50 +39,50 @@ class in
 using namespace std;
 int main()
 {
-    switch(2)
-    {
-        case 1:
+	switch(2)
+	{
+		case 1:
         {
-            array nums = {1,2,3,4};
-            auto result = into(nums, each (x) is(x*x)); 
-            return result[1];
+			array nums = {1,2,3,4};
+			auto result = into(nums, each (x) is(x*x)); 
+			return result[1];
         }   
-        case 2:
+		case 2:
         {
-            map<int,string> nums = { {1,"one"}, {2,"two"}, {3,"three"}, {4,"four"} }; 
-            auto result = in(nums, each(x) is(make_pair(x.first*x.first,x.second)));
-            return result[1].first;
+			map<int,string> nums = { {1,"one"}, {2,"two"}, {3,"three"}, {4,"four"} }; 
+			auto result = in(nums, each(x) is(make_pair(x.first*x.first,x.second)) );
+			return result[1].first;
         }
-        case 3:
+		case 3:
         {
-            vector<int> nums = {1,2,3,4};
-            auto result = in(nums, each(x) is((true)?x*x:x) );
-            return result[1];
+			vector<int> nums = {1,2,3,4};
+			auto result = in(nums, each(x) is((true)?x*x:x) );
+			return result[1];
         }
-        case 4:
+		case 4:
         {
-            set nums = {1,2,3,4};
-            auto result = in(nums, each(x) is((true)?x*x:x) );
-            return result[1];
+			set nums = {1,2,3,4};
+			auto result = in(nums, each(x) is(x*x) );
+			return result[1];
         }
-        case 5:
+		case 5:
         {
-            vector<int> nums = {1,2,3,4};
-            auto result = in(nums, each(x) is(x*x) );
-            return result[1];
+			vector<int> nums = {1,2,3,4};
+			auto result = in(nums, each(x) is(x*x) );
+			return result[1];
         }
-        case 6:
+		case 6:
         {
-            deque<int> nums = {1,2,3,4};
-            auto result = in(nums, each(x){return x*x;});
-            return result[1];
+			deque<int> nums = {1,2,3,4};
+			auto result = in(nums, each(x) is(x*x) );
+			return result[1];
         }
-        case 7:
+		case 7:
         {
-            string letters = "hello";
-            auto result = in(letters, each(x){return toupper(x);});
-            return result[1];
+			string letters = "hello";
+			auto result = in(letters, each(x) is(toupper(x)) );
+			return result[1];
         }
-    }
+	}
     return 0;
 }
