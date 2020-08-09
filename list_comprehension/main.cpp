@@ -89,7 +89,7 @@ int main()
     case 4:
     {
       set nums = {1,2,3,4};
-      auto result = into(nums, when(x, x<3, x*x));
+      auto result = in(nums, when(x, x<3, x*x));
       return result.size();
     }
     case 5:
