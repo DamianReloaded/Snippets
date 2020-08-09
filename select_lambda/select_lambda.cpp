@@ -15,7 +15,7 @@ class table
         std::deque<T> rows;
 };
 
-#define with(x,w) [](auto& x) { return w; }
+#define where(x,w) [](auto& x) { return w; }
 
 int main()
 {
@@ -29,7 +29,7 @@ int main()
     records.insert({1,1.123});
     records.insert({2,2.234});
     records.insert({3,3.345});
-    auto results = records.select( with(r, r.id==2) );
+    auto results = records.select( where(r, r.id==2) );
 
     return results.rows[0].id;
 }
