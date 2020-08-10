@@ -60,7 +60,7 @@ class in
     C<T, Args...> items;
 };
 
-#define when(x,c,f) [](const auto& x) {return bool(c);}, [](const auto& x) {return f;}
+#define only(x,c,f) [](const auto& x) {return bool(c);}, [](const auto& x) {return f;}
 #define each(x,f) [](const auto& x) {return f;}
 
 using namespace std;
@@ -71,7 +71,7 @@ int main()
     case 1:
     {
       array nums = {1,2,3,4};
-      auto result = into(nums, when(x, x<3, x*x));
+      auto result = into(nums, only(x, x<3, x*x));
       return result[1];
     }   
     case 2:
@@ -89,7 +89,7 @@ int main()
     case 4:
     {
       set nums = {1,2,3,4};
-      auto result = in(nums, when(x, x<3, x*x));
+      auto result = in(nums, only(x, x<3, x*x));
       return result.size();
     }
     case 5:
