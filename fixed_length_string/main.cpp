@@ -25,10 +25,7 @@ namespace owl {
                 m_array[(m_length+1<Tsize-1)?m_length+1:Tsize-1]=0;
             }
 
-            std::string string()
-            {
-                return std::string(&m_array[0],Tsize);
-            }
+            T* cstring() { return &m_array[0]; }
 
             size_t size () {return Tsize;}
             size_t bytesize () {return Tsize*sizeof(T);}
@@ -39,7 +36,21 @@ namespace owl {
         template <size_t Tsize=50> class text : public textfixed<char, Tsize>
         {
             public:
+                text() { }
+
+                text(const char* _value)
+                {
+                    textfixed<char,Tsize>::operator=(_value);
+                }
+
                 void operator = (const char* _value) { textfixed<char,Tsize>::operator = (_value); }
+
+                const char* cstring() { return (const char*)&textfixed<char,Tsize>::m_array[0]; }
+
+                std::string string()
+                {
+                    return std::string(&textfixed<char,Tsize>::m_array[0], textfixed<char,Tsize>::length());
+                }
 
                 std::string_view string_view()
                 {
@@ -51,10 +62,13 @@ namespace owl {
         template <size_t Tsize=50> class text : public textfixed<char16_t, Tsize>
         {
             public:
-                void operator = (const char16_t* _value)
-                {
-                    textfixed<char16_t,Tsize>::operator=(_value);
-                }
+                text() { }
+                text(const char16_t* _value) { textfixed<char16_t,Tsize>::operator=(_value); }
+                text(const wchar_t* _value) { textfixed<char16_t,Tsize>::operator=((const char16_t*)_value); }
+                void operator = (const char16_t* _value) { textfixed<char16_t,Tsize>::operator=(_value); }
+                void operator = (const wchar_t* _value) { textfixed<char16_t,Tsize>::operator=((const char16_t*)_value); }
+
+                const wchar_t* cstring() { return (const wchar_t*)&textfixed<char16_t,Tsize>::m_array[0]; }
 
                 std::wstring wstring()
                 {
@@ -69,7 +83,6 @@ namespace owl {
         };
     }
 }
-
 
 int main()
 {
