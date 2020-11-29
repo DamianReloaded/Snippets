@@ -86,12 +86,17 @@ namespace owl {
 
 int main()
 {
-    owl::c16::text<20> text;
+    owl::c16::text<20> text16 = L"Hello World 0123456789";
+    owl::c16::text<20> text162 = text16;
+    std::wcout << text162.cstring() << std::endl;
+    std::cout << "16bit Byte size: " << text162.bytesize() <<std::endl;
+    std::cout << "16bit Length: " << text162.length() <<std::endl;
+    std::cout << "16bit size: " << text162.size() <<std::endl<<std::endl;
 
-    text = (const char16_t*)L"0123456789";
-    std::wcout << text.wstring() << std::endl;
-    std::cout << "Byte size: " << text.bytesize() <<std::endl;
-    std::cout << "Length: " << text.length() <<std::endl;
-    std::cout << "size: " << text.size() <<std::endl;
+    owl::c8::text<20> text8 = "Hello World 0123456789";
+    std::cout << text8.cstring() << std::endl;
+    std::cout << "8bit Byte size: " << text8.bytesize() <<std::endl;
+    std::cout << "8bit Length: " << text8.length() <<std::endl;
+    std::cout << "8bit size: " << text8.size() <<std::endl;
     return 0;
 }
