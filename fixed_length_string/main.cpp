@@ -5,8 +5,10 @@ namespace owl {
     template <typename T, size_t Tsize=50>
     class textfixed
     {
-        std::array<T,Tsize> m_array;
-        size_t m_length;
+        protected:
+            std::array<T,Tsize> m_array;
+            size_t m_length;
+
         public:
             textfixed() : m_length(0) {}
             operator const T*() const { return &m_array[0]; }
@@ -15,21 +17,17 @@ namespace owl {
             {
                 m_length = 0;
                 T* c = (T*)_value;
-                while (*c!=L'\0' && m_length < Tsize)
+                while (*c!=L'\0' && m_length < Tsize-1)
                 {
                     m_array[m_length]=*c;
                     m_length++; c++;
                 }
+                m_array[(m_length+1<Tsize-1)?m_length+1:Tsize-1]=0;
             }
 
             std::string string()
             {
                 return std::string(&m_array[0],Tsize);
-            }
-
-            std::wstring wstring()
-            {
-                return std::wstring((wchar_t*)&m_array[0],Tsize);
             }
 
             size_t size () {return Tsize;}
@@ -42,16 +40,36 @@ namespace owl {
         {
             public:
                 void operator = (const char* _value) { textfixed<char,Tsize>::operator = (_value); }
+
+                std::string_view string_view()
+                {
+                    return std::string_view(&textfixed<char,Tsize>::m_array[0], textfixed<char,Tsize>::length());
+                }
         };
     }
     namespace c16 {
         template <size_t Tsize=50> class text : public textfixed<char16_t, Tsize>
         {
             public:
-                void operator = (const char16_t* _value) { textfixed<char16_t,Tsize>::operator=(_value); }
+                void operator = (const char16_t* _value)
+                {
+                    textfixed<char16_t,Tsize>::operator=(_value);
+                }
+
+                std::wstring wstring()
+                {
+                    size_t size = this->length();
+                    return std::wstring((wchar_t*)&textfixed<char16_t,Tsize>::m_array[0],textfixed<char16_t,Tsize>::length());
+                }
+
+                std::wstring_view wstring_view()
+                {
+                    return std::wstring_view((wchar_t*)&textfixed<char16_t,Tsize>::m_array[0], textfixed<char16_t,Tsize>::length());
+                }
         };
     }
 }
+
 
 int main()
 {
