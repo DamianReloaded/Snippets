@@ -1,0 +1,1 @@
+ x86_64-w64-mingw32-g++.exe -std=c++17 -O2 main_no_thread.cpp -o main_no_thread.exe
