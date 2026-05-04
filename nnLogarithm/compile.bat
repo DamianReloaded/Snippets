@@ -1,0 +1,1 @@
+g++ -std=c++23 -O3 -o program.exe main.cpp
