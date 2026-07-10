@@ -1,115 +1,440 @@
-#include <array>
+#include <iostream>
 #include <vector>
-#include <deque>
-#include <map>
-#include <set>
+#include <array>
 #include <list>
+#include <set>
+#include <map>
+#include <unordered_map>
+#include <deque>
 #include <string>
+#include <utility>
+#include <type_traits>
 
-template <typename T, size_t S>
-class into : public std::array<T,S>
+namespace ListComprehension
 {
-  public:
-    into (std::array<T,S>& input, auto func)
+    // ============================================================
+    // CORE EXPRESSIONS
+    // ============================================================
+
+    struct Expression
     {
-      for (size_t i=0; i<this->size(); i++)
-      {
-        (*this)[i] = func(input[i]);
-      }
+    };
+
+    template<typename T>
+    struct ValueExpression : Expression
+    {
+        T value;
+
+        template<typename Value>
+        constexpr auto operator()(Value) const
+        {
+            return value;
+        }
+    };
+
+    template<typename Function>
+    struct FunctionExpression : Expression
+    {
+        Function function;
+
+        template<typename Value>
+        constexpr auto operator()(Value value) const
+        {
+            return function(value);
+        }
+    };
+
+    template<typename Function>
+    constexpr auto makeExpression(Function function)
+    {
+        return FunctionExpression<Function>
+        {
+            {},
+            std::move(function)
+        };
     }
 
-    into (std::array<T,S>& input, auto condition, auto func)
+    struct Placeholder : Expression
     {
-      for (size_t i=0; i<this->size(); i++)
-      {
-        if (!condition(input[i])) continue;
-        (*this)[i] = func(input[i]);
-      }
+        template<typename Value>
+        constexpr auto operator()(Value value) const
+        {
+            return value;
+        }
+    };
+
+    inline constexpr Placeholder x{};
+
+    struct AlwaysTrue : Expression
+    {
+        template<typename Value>
+        constexpr bool operator()(Value) const
+        {
+            return true;
+        }
+    };
+
+    template<typename T>
+    struct IsExpression : std::is_base_of<Expression, std::remove_cvref_t<T>>
+    {
+    };
+
+    template<typename T>
+    inline constexpr bool IsExpressionV = IsExpression<T>::value;
+
+    template<typename T>
+    constexpr auto ToExpression(T&& value)
+    {
+        using Type = std::remove_cvref_t<T>;
+
+        if constexpr (IsExpressionV<Type>)
+        {
+            return std::forward<T>(value);
+        }
+        else
+        {
+            return ValueExpression<Type>
+            {
+                {},
+                std::forward<T>(value)
+            };
+        }
     }
 
-};
 
-template<typename T, template<typename...> class C, typename... Args>
-class in
-{
-  public:
-  in (C<T, Args...>& input, auto condition, auto func)
-  {
-    for (auto inp=input.begin(); inp!=input.end(); inp++)
+    // ============================================================
+    // MEMBER ACCESS EXPRESSIONS
+    // ============================================================
+
+    struct FirstExpression : Expression
     {
-      if (!condition(*inp)) continue;
-      (void)items.insert(items.end(),func(*inp));
-    }
-  }
+        template<typename Pair>
+        constexpr decltype(auto) operator()(Pair&& pair) const
+        {
+            return std::forward<Pair>(pair).first;
+        }
+    };
 
-  in (C<T, Args...>& input, auto func)
-  {
-    for (auto inp=input.begin(); inp!=input.end(); inp++)
+
+    struct SecondExpression : Expression
     {
-      (void)items.insert(items.end(),func(*inp));
+        template<typename Pair>
+        constexpr decltype(auto) operator()(Pair&& pair) const
+        {
+            return std::forward<Pair>(pair).second;
+        }
+    };
+
+
+    inline constexpr FirstExpression first{};
+
+    inline constexpr SecondExpression second{};
+
+
+    // ============================================================
+    // OPERATORS
+    // ============================================================
+
+    template<typename Left, typename Right>
+    struct MultiplyExpression : Expression
+    {
+        Left left;
+        Right right;
+
+        template<typename Value>
+        constexpr auto operator()(Value value) const
+        {
+            return left(value) * right(value);
+        }
+    };
+
+
+    template<typename Left, typename Right>
+    constexpr auto operator*(Left&& left, Right&& right)
+    {
+        using LeftExpression =
+            decltype(ToExpression(std::forward<Left>(left)));
+
+        using RightExpression =
+            decltype(ToExpression(std::forward<Right>(right)));
+
+        return MultiplyExpression<LeftExpression, RightExpression>
+        {
+            {},
+            ToExpression(std::forward<Left>(left)),
+            ToExpression(std::forward<Right>(right))
+        };
     }
-  }
 
-  auto        begin        () const                { return items.begin(); }
-  auto        end          () const                { return items.end(); }
-  auto        size         () const                { return items.size(); }
-  const auto& operator []  (const size_t& i) const { auto iter = items.begin(); std::advance(iter,i); return *iter; }
-  operator    auto         () const                { return items; }
 
-  private:
-    C<T, Args...> items;
-};
+    template<typename Left, typename Right>
+    struct LessExpression : Expression
+    {
+        Left left;
+        Right right;
 
-#define only(x,c,f) [](const auto& x) {return bool(c);}, [](const auto& x) {return f;}
-#define each(x,f) [](const auto& x) {return f;}
+        template<typename Value>
+        constexpr auto operator()(Value value) const
+        {
+            return left(value) < right(value);
+        }
+    };
 
-using namespace std;
+
+    template<typename Left, typename Right>
+    constexpr auto operator<(Left&& left, Right&& right)
+    {
+        using LeftExpression =
+            decltype(ToExpression(std::forward<Left>(left)));
+
+        using RightExpression =
+            decltype(ToExpression(std::forward<Right>(right)));
+
+        return LessExpression<LeftExpression, RightExpression>
+        {
+            {},
+            ToExpression(std::forward<Left>(left)),
+            ToExpression(std::forward<Right>(right))
+        };
+    }
+
+
+    // ============================================================
+    // QUERY
+    // ============================================================
+
+    template<typename Container, typename Condition = AlwaysTrue>
+    struct Query
+    {
+        const Container& container;
+        Condition condition;
+
+
+        template<typename NewCondition>
+        constexpr auto only(NewCondition newCondition) const
+        {
+            using ExpressionType =
+                decltype(ToExpression(newCondition));
+
+            return Query<Container, ExpressionType>
+            {
+                container,
+                ToExpression(newCondition)
+            };
+        }
+
+
+        template<typename ExpressionType>
+        auto each(ExpressionType expression) const
+        {
+            auto expr = ToExpression(expression);
+
+            using ResultType =
+                decltype(expr(*container.begin()));
+
+            std::vector<ResultType> result;
+
+            for (auto&& value : container)
+            {
+                if (condition(value))
+                {
+                    result.push_back(expr(value));
+                }
+            }
+
+            return result;
+        }
+    };
+
+
+    template<typename Container>
+    constexpr auto in(const Container& container)
+    {
+        return Query<Container>
+        {
+            container,
+            {}
+        };
+    }
+
+
+    // ============================================================
+    // UTILITIES
+    // ============================================================
+
+    template<typename Container>
+    void Print(const Container& container)
+    {
+        for (auto&& value : container)
+        {
+            std::cout << value << " ";
+        }
+
+        std::cout << "\n";
+    }
+
+}
+
+// ============================================================
+// USER CODE
+// ============================================================
 int main()
 {
-  switch(6)
-  {
-    case 1:
+    using namespace ListComprehension;
+
+    // ============================================================
+    // std::vector
+    // ============================================================
+
+    std::vector<int> nums{ 1, 2, 3, 4 };
+
+    auto squares =
+        in(nums)
+            .each(x * x);
+
+    Print(squares);
+
+    auto filtered =
+        in(nums)
+            .only(x < 3)
+            .each(x * x);
+
+    Print(filtered);
+
+
+    // ============================================================
+    // std::array
+    // ============================================================
+
+    std::array<int, 4> array{ 5, 6, 7, 8 };
+
+    auto arraySquares =
+        in(array)
+            .each(x * x);
+
+    Print(arraySquares);
+
+
+    // ============================================================
+    // std::list
+    // ============================================================
+
+    std::list<int> list{ 10, 20, 30 };
+
+    auto listSquares =
+        in(list)
+            .each(x * x);
+
+    Print(listSquares);
+
+
+    // ============================================================
+    // std::set
+    // ============================================================
+
+    std::set<int> set{ 3, 4, 5 };
+
+    auto setSquares =
+        in(set)
+            .only(x < 5)
+            .each(x * x);
+
+    Print(setSquares);
+
+
+    // ============================================================
+    // std::map
+    // ============================================================
+
+    std::map<int, int> map
     {
-      array nums = {1,2,3,4};
-      auto result = into(nums, only(x, x<3, x*x));
-      return result[1];
-    }   
-    case 2:
+        { 1, 10 },
+        { 2, 20 },
+        { 3, 30 }
+    };
+
+
+    auto keys =
+        in(map)
+            .each(first);
+
+    Print(keys);
+
+
+    auto values =
+        in(map)
+            .each(second);
+
+    Print(values);
+
+
+    auto products =
+        in(map)
+            .each(first * second);
+
+    Print(products);
+
+
+    auto filteredProducts =
+        in(map)
+            .only(first < 3)
+            .each(first * second);
+
+    Print(filteredProducts);
+
+
+    // ============================================================
+    // std::unordered_map
+    // ============================================================
+
+    std::unordered_map<int, int> unorderedMap
     {
-      string letters = "hello";
-      auto result = in(letters, each(x, toupper(x)));
-      return result[1];
-    }
-    case 3:
-    {
-      list nums = {1,2,3,4};
-      auto result = in(nums, each(x, (x>2)?x*x:x)); 
-      return result[1];
-    }
-    case 4:
-    {
-      set nums = {1,2,3,4};
-      auto result = in(nums, only(x, x<3, x*x));
-      return result.size();
-    }
-    case 5:
-    {
-      deque nums = {1,2,3,4};
-      auto result = in(nums, each(x, x*x));
-      return result[1];
-    }
-    case 6:
-    {
-      vector nums = {1,2,3,4};
-      auto result = in(nums, each(x, (true)?x*x:x));
-      return result[1];
-    }    
-    case 7:
-    {
-      map<int,string> nums = { {1,"one"}, {2,"two"}, {3,"three"}, {4,"four"} }; 
-      auto result = in(nums, each(x, make_pair(x.first*x.first,x.second)));
-      return result[1].first;
-    }
-  }
-  return 0;
+        { 4, 40 },
+        { 5, 50 },
+        { 6, 60 }
+    };
+
+
+    auto unorderedProducts =
+        in(unorderedMap)
+            .each(first * second);
+
+    Print(unorderedProducts);
+
+
+    auto filteredUnorderedProducts =
+        in(unorderedMap)
+            .only(first < 6)
+            .each(first * second);
+
+    Print(filteredUnorderedProducts);
+
+
+    // ============================================================
+    // std::deque
+    // ============================================================
+
+    std::deque<int> deque{ 7, 8, 9, 10 };
+
+    auto dequeSquares =
+        in(deque)
+            .each(x * x);
+
+    Print(dequeSquares);
+
+
+    // ============================================================
+    // std::string
+    // ============================================================
+
+    std::string text = "Hello";
+
+    auto characters =
+        in(text)
+            .each(x);
+
+    Print(characters);
+
+
+    return 0;
 }
