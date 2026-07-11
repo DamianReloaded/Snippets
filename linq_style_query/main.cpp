@@ -1,515 +1,641 @@
+// Compile-time query DSL (Domain-Specific Language)
+
 #include <iostream>
-#include <vector>
+#include <meta>
 #include <string>
 #include <type_traits>
 #include <utility>
-#include <meta>
+#include <vector>
 
-namespace Linq
+template<typename T>
+constexpr auto GetMembers()
 {
-    // ============================================================
-    // EXPRESSIONS
-    // ============================================================
-
-    struct Expression
-    {
-    };
-
-
-    template<typename T>
-    struct ValueExpression : Expression
-    {
-        T value;
-
-
-        constexpr ValueExpression(T value)
-            :
-            value(value)
-        {
-        }
-
-
-        template<typename Value>
-        constexpr auto operator()(Value&&) const
-        {
-            return value;
-        }
-    };
-
-
-
-    struct RowExpression : Expression
-    {
-        template<typename Value>
-        constexpr decltype(auto) operator()(Value&& value) const
-        {
-            return std::forward<Value>(value);
-        }
-    };
-
-
-    inline constexpr RowExpression row{};
-
-
-
-    template<typename T>
-    struct IsExpression :
-        std::is_base_of<
-            Expression,
-            std::remove_cvref_t<T>>
-    {
-    };
-
-
-    template<typename T>
-    inline constexpr bool IsExpressionV =
-        IsExpression<T>::value;
-
-
-
-    template<typename T>
-    constexpr auto ToExpression(T&& value)
-    {
-        using Type =
-            std::remove_cvref_t<T>;
-
-
-        if constexpr(IsExpressionV<Type>)
-        {
-            return std::forward<T>(value);
-        }
-        else
-        {
-            return ValueExpression<Type>
-            {
-                std::forward<T>(value)
-            };
-        }
-    }
-
-
-
-    // ============================================================
-    // MEMBER ACCESS
-    // ============================================================
-
-
-    template<typename Type, typename Member>
-    struct MemberExpression : Expression
-    {
-        Member Type::* member;
-
-
-        constexpr MemberExpression(Member Type::* value)
-            :
-            member(value)
-        {
-        }
-
-
-        template<typename Object>
-        constexpr decltype(auto) operator()(Object&& object) const
-        {
-            return std::forward<Object>(object).*member;
-        }
-    };
-
-
-
-    template<typename Type, typename Member>
-    constexpr auto field(Member Type::* member)
-    {
-        return MemberExpression<Type, Member>
-        {
-            member
-        };
-    }
-
-
-
-    // ============================================================
-    // OPERATORS
-    // ============================================================
-
-
-    template<typename Left, typename Right>
-    struct EqualExpression : Expression
-    {
-        Left left;
-        Right right;
-
-
-        constexpr EqualExpression(
-            Left left,
-            Right right)
-            :
-            left(left),
-            right(right)
-        {
-        }
-
-
-        template<typename Value>
-        constexpr auto operator()(Value&& value) const
-        {
-            return left(value) ==
-                   right(value);
-        }
-    };
-
-
-
-    template<typename Left, typename Right>
-    requires (
-        IsExpressionV<Left> ||
-        IsExpressionV<Right>)
-    constexpr auto operator==(
-        Left&& left,
-        Right&& right)
-    {
-        using LeftExpression =
-            decltype(ToExpression(
-                std::forward<Left>(left)));
-
-
-        using RightExpression =
-            decltype(ToExpression(
-                std::forward<Right>(right)));
-
-
-        return EqualExpression<
-            LeftExpression,
-            RightExpression>
-        {
-            ToExpression(std::forward<Left>(left)),
-            ToExpression(std::forward<Right>(right))
-        };
-    }
-
-
-
-    template<typename Left, typename Right>
-    struct GreaterExpression : Expression
-    {
-        Left left;
-        Right right;
-
-
-        constexpr GreaterExpression(
-            Left left,
-            Right right)
-            :
-            left(left),
-            right(right)
-        {
-        }
-
-
-        template<typename Value>
-        constexpr auto operator()(Value&& value) const
-        {
-            return left(value) >
-                   right(value);
-        }
-    };
-
-
-
-    template<typename Left, typename Right>
-    requires (
-        IsExpressionV<Left> ||
-        IsExpressionV<Right>)
-    constexpr auto operator>(
-        Left&& left,
-        Right&& right)
-    {
-        using LeftExpression =
-            decltype(ToExpression(
-                std::forward<Left>(left)));
-
-
-        using RightExpression =
-            decltype(ToExpression(
-                std::forward<Right>(right)));
-
-
-        return GreaterExpression<
-            LeftExpression,
-            RightExpression>
-        {
-            ToExpression(std::forward<Left>(left)),
-            ToExpression(std::forward<Right>(right))
-        };
-    }
-
-
-
-    template<typename Left, typename Right>
-    struct MultiplyExpression : Expression
-    {
-        Left left;
-        Right right;
-
-
-        constexpr MultiplyExpression(
-            Left left,
-            Right right)
-            :
-            left(left),
-            right(right)
-        {
-        }
-
-
-        template<typename Value>
-        constexpr auto operator()(Value&& value) const
-        {
-            return left(value) *
-                   right(value);
-        }
-    };
-
-
-
-    template<typename Left, typename Right>
-    requires (
-        IsExpressionV<Left> ||
-        IsExpressionV<Right>)
-    constexpr auto operator*(
-        Left&& left,
-        Right&& right)
-    {
-        using LeftExpression =
-            decltype(ToExpression(
-                std::forward<Left>(left)));
-
-
-        using RightExpression =
-            decltype(ToExpression(
-                std::forward<Right>(right)));
-
-
-        return MultiplyExpression<
-            LeftExpression,
-            RightExpression>
-        {
-            ToExpression(std::forward<Left>(left)),
-            ToExpression(std::forward<Right>(right))
-        };
-    }
-
-
-
-    // ============================================================
-    // QUERY
-    // ============================================================
-
-
-    struct TrueExpression : Expression
-    {
-        template<typename Value>
-        constexpr bool operator()(Value&&) const
-        {
-            return true;
-        }
-    };
-
-
-
-    template<typename Container, typename Condition = TrueExpression>
-    class Query
-    {
-    public:
-
-        Query(
-            const Container& source,
-            Condition condition = {})
-            :
-            source(source),
-            condition(condition)
-        {
-        }
-
-
-
-        template<typename NewCondition>
-        auto where(NewCondition expression) const
-        {
-            return Query<
-                Container,
-                decltype(ToExpression(expression))>
-            {
-                source,
-                ToExpression(expression)
-            };
-        }
-
-
-
-        template<typename Projection>
-        auto select(Projection expression) const
-        {
-            auto projection =
-                ToExpression(expression);
-
-
-            using Result =
-                std::remove_cvref_t<
-                    decltype(
-                        projection(
-                            *source.begin()))>;
-
-
-            std::vector<Result> results;
-
-
-            for(auto&& value : source)
-            {
-                if(condition(value))
-                {
-                    results.push_back(
-                        projection(value));
-                }
-            }
-
-
-            return results;
-        }
-
-
-
-    private:
-
-        const Container& source;
-        Condition condition;
-    };
-
-
-
-    template<typename Container>
-    auto from(const Container& container)
-    {
-        return Query<Container>
-        {
-            container
-        };
-    }
-
-
-
-    // ============================================================
-    // OUTPUT
-    // ============================================================
-
-
-    template<typename Container>
-    void print(const Container& container)
-    {
-        for(auto&& value : container)
-        {
-            std::cout
-                << value
-                << " ";
-        }
-
-        std::cout << "\n";
-    }
-
+    constexpr auto context =
+        std::meta::access_context::current();
+
+    return std::define_static_array(
+        std::meta::nonstatic_data_members_of(
+            ^^T,
+            context));
 }
 
 // ============================================================
-// USER CODE
+// DATA
 // ============================================================
 
-// ============================================================
-// USER DATA
-// ============================================================
-
-struct record
+struct Record
 {
-    int a;
-    float b;
+    std::string name;
+    int age;
+    float weight;
+};
+
+// ============================================================
+// NORMALIZATION
+// ============================================================
+
+template<typename T>
+using CleanType =
+    std::remove_cvref_t<T>;
+
+
+template<typename T>
+struct Normalize
+{
+    using Type =
+        CleanType<T>;
+};
+
+
+template<size_t Size>
+struct Normalize<const char(&)[Size]>
+{
+    using Type =
+        std::string;
+};
+
+
+template<typename T>
+using NormalizeT =
+    typename Normalize<T>::Type;
+
+
+// ============================================================
+// FORWARD DECLARATIONS
+// ============================================================
+
+template<typename T>
+constexpr auto ToExpression(T&& value);
+
+
+template<typename Expression, typename Row>
+constexpr decltype(auto) Evaluate(
+    const Expression& expression,
+    Row&& row);
+
+
+// ============================================================
+// CRTP BASE
+// ============================================================
+
+template<typename Derived>
+struct Expression
+{
+    template<typename Value>
+    constexpr auto operator==(Value&& value) const;
+
+    template<typename Value>
+    constexpr auto operator>(Value&& value) const;
+
+    template<typename Value>
+    constexpr auto operator&&(Value&& value) const;
+
+    template<typename Value>
+    constexpr auto operator||(Value&& value) const;
+
+    template<typename Value>
+    constexpr auto contains(Value&& value) const;
+};
+
+
+
+template<typename T>
+concept ExpressionType =
+    std::derived_from<
+        CleanType<T>,
+        Expression<CleanType<T>>>;
+
+
+// ============================================================
+// VALUE
+// ============================================================
+
+template<typename T>
+struct ValueExpression :
+    Expression<ValueExpression<T>>
+{
+    T value;
+
+
+    constexpr ValueExpression() = default;
+
+
+    template<typename U>
+    constexpr ValueExpression(U&& value)
+        :
+        value(std::forward<U>(value))
+    {
+    }
+
+
+    template<typename Row>
+    constexpr decltype(auto) Evaluate(Row&&) const
+    {
+        return value;
+    }
+};
+
+
+// ============================================================
+// FIELD
+// ============================================================
+
+template<auto Member>
+struct FieldExpression :
+    Expression<FieldExpression<Member>>
+{
+    template<typename Row>
+    constexpr decltype(auto) Evaluate(Row&& row) const
+    {
+        return std::forward<Row>(row).[:Member:];
+    }
+};
+
+
+// ============================================================
+// TO EXPRESSION
+// ============================================================
+
+template<typename T>
+constexpr auto ToExpression(T&& value)
+{
+    using Type =
+        CleanType<T>;
+
+
+    if constexpr(ExpressionType<Type>)
+    {
+        return std::forward<T>(value);
+    }
+    else
+    {
+        using Stored =
+            NormalizeT<T>;
+
+
+        return ValueExpression<Stored>
+        {
+            std::forward<T>(value)
+        };
+    }
+}
+
+
+// ============================================================
+// EVALUATE
+// ============================================================
+
+template<typename Expression, typename Row>
+constexpr decltype(auto) Evaluate(
+    const Expression& expression,
+    Row&& row)
+{
+    return expression.Evaluate(
+        std::forward<Row>(row));
+}
+
+
+// ============================================================
+// OPERATIONS
+// ============================================================
+
+struct Equal
+{
+    template<typename L, typename R>
+    static constexpr auto Apply(
+        L&& l,
+        R&& r)
+    {
+        return l == r;
+    }
+};
+
+
+struct Greater
+{
+    template<typename L, typename R>
+    static constexpr auto Apply(
+        L&& l,
+        R&& r)
+    {
+        return l > r;
+    }
+};
+
+
+struct Contains
+{
+    template<typename L, typename R>
+    static constexpr auto Apply(
+        L&& l,
+        R&& r)
+    {
+        return l.find(r) !=
+               std::string::npos;
+    }
+};
+
+
+struct LogicalAnd
+{
+    template<typename L, typename R>
+    static constexpr auto Apply(
+        L&& l,
+        R&& r)
+    {
+        return l && r;
+    }
+};
+
+
+struct LogicalOr
+{
+    template<typename L, typename R>
+    static constexpr auto Apply(
+        L&& l,
+        R&& r)
+    {
+        return l || r;
+    }
+};
+
+
+// ============================================================
+// BINARY EXPRESSION
+// ============================================================
+
+template<typename Left, typename Right, typename Operation>
+struct BinaryExpression :
+    Expression<
+        BinaryExpression<Left, Right, Operation>>
+{
+    Left left;
+    Right right;
+
+
+    constexpr BinaryExpression(
+        Left left,
+        Right right)
+        :
+        left(std::move(left)),
+        right(std::move(right))
+    {
+    }
+
+
+    template<typename Row>
+    constexpr auto Evaluate(Row&& row) const
+    {
+        return Operation::Apply(
+            ::Evaluate(left, row),
+            ::Evaluate(right, row));
+    }
+};
+
+
+
+template<typename Operation, typename Left, typename Right>
+constexpr auto MakeBinary(
+    Left&& left,
+    Right&& right)
+{
+    using LeftExpression =
+        decltype(
+            ToExpression(
+                std::forward<Left>(left)));
+
+
+    using RightExpression =
+        decltype(
+            ToExpression(
+                std::forward<Right>(right)));
+
+
+    return BinaryExpression
+    <
+        LeftExpression,
+        RightExpression,
+        Operation
+    >
+    (
+        ToExpression(
+            std::forward<Left>(left)),
+
+        ToExpression(
+            std::forward<Right>(right))
+    );
+}
+
+
+// ============================================================
+// CRTP OPERATORS
+// ============================================================
+
+template<typename Derived>
+template<typename Value>
+constexpr auto Expression<Derived>::operator==(Value&& value) const
+{
+    return MakeBinary<Equal>(
+        static_cast<const Derived&>(*this),
+        std::forward<Value>(value));
+}
+
+
+
+template<typename Derived>
+template<typename Value>
+constexpr auto Expression<Derived>::operator>(Value&& value) const
+{
+    return MakeBinary<Greater>(
+        static_cast<const Derived&>(*this),
+        std::forward<Value>(value));
+}
+
+
+
+template<typename Derived>
+template<typename Value>
+constexpr auto Expression<Derived>::operator&&(Value&& value) const
+{
+    return MakeBinary<LogicalAnd>(
+        static_cast<const Derived&>(*this),
+        std::forward<Value>(value));
+}
+
+
+
+template<typename Derived>
+template<typename Value>
+constexpr auto Expression<Derived>::operator||(Value&& value) const
+{
+    return MakeBinary<LogicalOr>(
+        static_cast<const Derived&>(*this),
+        std::forward<Value>(value));
+}
+
+
+
+template<typename Derived>
+template<typename Value>
+constexpr auto Expression<Derived>::contains(Value&& value) const
+{
+    return MakeBinary<Contains>(
+        static_cast<const Derived&>(*this),
+        std::forward<Value>(value));
+}
+
+
+// ============================================================
+// REFLECTION FIELDS
+// ============================================================
+
+template<typename Row>
+auto MakeFields()
+{
+    struct Fields;
+
+
+    consteval
+    {
+        std::vector<std::meta::info> generated;
+
+
+        template for
+        (
+            constexpr auto member :
+            [: std::meta::reflect_constant_array(
+                GetMembers<Row>()) :]
+        )
+        {
+            generated.push_back(
+                std::meta::data_member_spec(
+                    ^^FieldExpression<member>,
+                    {
+                        .name =
+                            std::meta::identifier_of(member)
+                    }));
+        }
+
+
+        std::meta::define_aggregate(
+            ^^Fields,
+            generated);
+    }
+
+
+    return Fields{};
+}
+
+
+// ============================================================
+// QUERY
+// ============================================================
+
+
+template<typename Container, typename Condition>
+struct FilteredQuery
+{
+    using Row =
+        typename Container::value_type;
+
+
+    const Container& source;
+    Condition condition;
+
+
+    struct Iterator
+    {
+        typename Container::const_iterator current;
+        typename Container::const_iterator end;
+        const Condition& condition;
+
+
+        void Advance()
+        {
+            while(current != end &&
+                !Evaluate(condition, *current))
+            {
+                ++current;
+            }
+        }
+
+
+        const Row& operator*() const
+        {
+            return *current;
+        }
+
+
+        Iterator& operator++()
+        {
+            ++current;
+            Advance();
+
+            return *this;
+        }
+
+
+        bool operator!=(const Iterator& other) const
+        {
+            return current != other.current;
+        }
+    };
+
+
+    auto begin() const
+    {
+        Iterator iterator
+        {
+            source.begin(),
+            source.end(),
+            condition
+        };
+
+        iterator.Advance();
+
+        return iterator;
+    }
+
+
+    auto end() const
+    {
+        return Iterator
+        {
+            source.end(),
+            source.end(),
+            condition
+        };
+    }
+
+
+    template<typename Projection>
+    auto select(Projection projection) const
+    {
+        auto expression =
+            ToExpression(projection);
+
+
+        using Result =
+            CleanType<
+                decltype(
+                    Evaluate(
+                        expression,
+                        *source.begin()))>;
+
+
+        std::vector<Result> result;
+
+
+        for(auto&& row : *this)
+        {
+            result.push_back(
+                Evaluate(
+                    expression,
+                    row));
+        }
+
+
+        return result;
+    }
 };
 
 
 
 // ============================================================
-// MAIN
+// NEW QUERY WITH DIRECT FIELDS
 // ============================================================
+
+
+template<typename Container>
+struct Query :
+    decltype(
+        MakeFields<
+            typename Container::value_type>())
+{
+    using Row =
+        typename Container::value_type;
+
+
+    using Fields =
+        decltype(
+            MakeFields<Row>());
+
+
+    const Container& source;
+
+
+
+    Query(const Container& source)
+        :
+        source(source)
+    {
+    }
+
+
+
+    template<typename Condition>
+    auto where(Condition expression) const
+    {
+        return FilteredQuery
+        <
+            Container,
+            decltype(
+                ToExpression(expression))
+        >
+        {
+            source,
+            ToExpression(expression)
+        };
+    }
+};
+
+
+
+template<typename Container>
+auto from(const Container& source)
+{
+    return Query<Container>
+    {
+        source
+    };
+}
+
+
+
+// ============================================================
+// MAIN TEST
+// ============================================================
+
 
 int main()
 {
-    using namespace Linq;
-
-
-    std::vector<record> records
+    std::vector<Record> records
     {
-        {1, 1.123f},
-        {2, 2.234f},
-        {3, 3.345f}
+        {"John",32,75.5f},
+        {"Mary",28,61.0f},
+        {"Peter",41,83.2f},
+        {"Jane",32,59.0f}
     };
 
+    auto q = from(records);
 
+    auto result =
+        q.where(
+            q.name.contains("a")
+            &&
+            (
+                q.age == 32
+                ||
+                q.weight > 60.0f
+            ));
+        //.select(q.name);
 
-    // ============================================================
-    // Select integer members
-    // ============================================================
+    for(auto&& record : result)
+    {
+        std::cout
+            << record.name
+            << '\n';
+    }
 
-    auto keys =
-        from(records)
-            .where(field(&record::a) == 2)
-            .select(field(&record::a));
-
-
-    print(keys);
-
-
-
-    // ============================================================
-    // Select floating point members
-    // ============================================================
-
-    auto magnitudes =
-        from(records)
-            .where(field(&record::b) > 2.0f)
-            .select(field(&record::b));
-
-
-    print(magnitudes);
-
-
-
-    // ============================================================
-    // Computed projection
-    // ============================================================
-
-    auto calculated =
-        from(records)
-            .where(field(&record::a) > 1)
-            .select(
-                field(&record::b) * 10
-            );
-
-
-    print(calculated);
-
-
-
-    // ============================================================
-    // Multiple operations
-    // ============================================================
-
-    auto doubled =
-        from(records)
-            .where(field(&record::b) > 1.0f)
-            .select(
-                field(&record::b) *
-                field(&record::a)
-            );
-
-
-    print(doubled);
-
-
-    return 0;
+    std::cin.get();
 }
